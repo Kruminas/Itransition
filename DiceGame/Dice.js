@@ -1,7 +1,15 @@
 class Dice {
-    constructor(sides) {
-      this.sides = sides;
+  constructor(sides) {
+    if (sides.length !== 6 || sides.some(isNaN)) {
+      throw new Error("Invalid dice sides");
     }
+    this.sides = sides;
+  }
+
+  roll(index) {
+    return this.sides[index];
+  }
+
   
     roll(value) {
       return this.sides[value % this.sides.length];

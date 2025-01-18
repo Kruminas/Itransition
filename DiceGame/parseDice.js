@@ -5,6 +5,7 @@ function parseDice(args) {
   return args.map((arg) => {
     const sides = arg.split(",").map(Number);
     if (sides.length !== 6 || sides.some(isNaN)) throw new Error(`Invalid dice: '${arg}'.`);
+    
     return new Dice(sides);
   });
 }

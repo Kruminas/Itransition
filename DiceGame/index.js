@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { parseDice } = require('./parseDice');
+const { getUserInput } = require('./Utils');
 
 function fairRandom(playerGuess, computerChoice) {
   const key = crypto.randomBytes(32);
@@ -53,11 +54,6 @@ async function getValidDiceIndex(dice, prompt) {
   }
 }
 
-async function getUserInput(prompt) {
-  process.stdout.write(prompt);
-  return new Promise((resolve) => process.stdin.once("data", (data) => resolve(data.toString().trim())));
-}
-
 async function playGame(dice) {
   const { key, number: computerChoice, hmac } = fairRandom(1, 0);
   console.log(`HMAC=${hmac}. Guess my number (0 or 1):`);
@@ -68,19 +64,41 @@ async function playGame(dice) {
     return;
   }
 
+  console.log(`My selection: ${computerChoice} (KEY=${key.toString('hex')}).`);
   const userGoesFirst = userGuess === computerChoice;
   console.log(userGoesFirst ? "You go first!" : "I go first!");
+
+  console.log("Choose your dice:");
+  dice.forEach((die, index) => {
+    console.log(`${index} - ${die.sides.join(', ')}`);
+  });
 
   const userDiceIndex = await getValidDiceIndex(dice, "Choose your dice (0, 1, 2): ");
   const computerDiceIndex = userGoesFirst ? (userDiceIndex + 1) % dice.length : userDiceIndex;
   console.log(`I chose dice ${computerDiceIndex}.`);
 
-  const userRoll = dice[userDiceIndex].roll(userGuess);
+  console.log("It's time for my throw.");
   const computerRoll = dice[computerDiceIndex].roll(computerChoice);
-  console.log(`Your roll: ${userRoll}, My roll: ${computerRoll}`);
+  console.log(`I selected a random value in the range 0..5 (HMAC=${crypto.randomBytes(32).toString('hex')}).`);
+  const modNumber = await getUserInput("Add your number modulo 6.\n0 - 0\n1 - 1\n2 - 2\n3 - 3\n4 - 4\n5 - 5\nYour selection: ");
+  
+  const result = (parseInt(modNumber) + computerChoice) % 6;
+  console.log(`My number is ${computerChoice} (KEY=${crypto.randomBytes(32).toString('hex')}).`);
+  console.log(`The result is ${computerChoice} + ${modNumber} = ${result} (mod 6).`);
+  console.log(`My throw is ${dice[computerDiceIndex].sides[result]}.`);
 
-  const result = userRoll > computerRoll ? "You win!" : userRoll < computerRoll ? "I win!" : "It's a tie!";
-  console.log(result);
+  console.log("It's time for your throw.");
+  const userRoll = dice[userDiceIndex].roll(userGuess);
+  console.log(`I selected a random value in the range 0..5 (HMAC=${crypto.randomBytes(32).toString('hex')}).`);
+  const userModNumber = await getUserInput("Add your number modulo 6.\n0 - 0\n1 - 1\n2 - 2\n3 - 3\n4 - 4\n5 - 5\nYour selection: ");
+  
+  const userResult = (parseInt(userModNumber) + userGuess) % 6;
+  console.log(`My number is ${userGuess} (KEY=${crypto.randomBytes(32).toString('hex')}).`);
+  console.log(`The result is ${userGuess} + ${userModNumber} = ${userResult} (mod 6).`);
+  console.log(`Your throw is ${dice[userDiceIndex].sides[userResult]}.`);
+
+  const resultMessage = userRoll > computerRoll ? "You win!" : userRoll < computerRoll ? "I win!" : "It's a tie!";
+  console.log(resultMessage);
 
   const probabilities = calculateDiceProbabilities(dice[userDiceIndex], dice[computerDiceIndex]);
   console.log(`Dice 0 vs Dice 1 | A Wins: ${probabilities.dice1.toFixed(2)}% | B Wins: ${probabilities.dice2.toFixed(2)}% | Tie: ${probabilities.tie.toFixed(2)}%`);
